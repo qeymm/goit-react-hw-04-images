@@ -1,5 +1,6 @@
 import style from './Searchbar.module.css';
 import { IoSearchCircleSharp } from 'react-icons/io5';
+import PropTypes from 'prop-types';
 
 export const Searchbar = ({ onSubmit }) => {
   return (
@@ -22,4 +23,8 @@ export const Searchbar = ({ onSubmit }) => {
       </form>
     </header>
   );
+};
+
+Searchbar.propTypes = {
+  onSubmit: PropTypes.func.isRequired,
 };

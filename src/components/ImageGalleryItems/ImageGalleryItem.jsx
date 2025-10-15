@@ -1,41 +1,37 @@
-import { Component } from 'react';
+import { useState, useCallback } from 'react';
 import style from './ImageGalleryItem.module.css';
 import ImageModal from 'components/Modal/Modal';
+import PropTypes from 'prop-types';
 
-export class ImageGalleryItem extends Component {
-  state = {
-    selectedImage: null,
-  };
+export function ImageGalleryItem({ webformatURL, largeImageURL, tags }) {
+  const [selectedImage, setSelectedImage] = useState(null);
 
-  handleOpenModal = () => {
-    this.setState({
-      selectedImage: this.props.largeImageURL,
-    });
-  };
+  const handleOpenModal = useCallback(() => {
+    setSelectedImage(largeImageURL);
+  }, [largeImageURL]);
 
-  handleCloseModal = () => {
-    this.setState({
-      selectedImage: null,
-    });
-  };
+  const handleCloseModal = useCallback(() => {
+    setSelectedImage(null);
+  }, []);
 
-  render() {
-    const { selectedImage } = this.state;
-    const { webformatURL, tags } = this.props;
-
-    return (
-      <li className={style.imageGalleryItem} onClick={this.handleOpenModal}>
-        <img
-          className={style.imageGalleryItemImage}
-          src={webformatURL}
-          alt={tags}
-        />
-        <ImageModal
-          modalClose={this.handleCloseModal}
-          modalOpen={selectedImage !== null}
-          image={selectedImage}
-        />
-      </li>
-    );
-  }
+  return (
+    <li className={style.imageGalleryItem} onClick={handleOpenModal}>
+      <img
+        className={style.imageGalleryItemImage}
+        src={webformatURL}
+        alt={tags}
+      />
+      <ImageModal
+        modalClose={handleCloseModal}
+        modalOpen={selectedImage !== null}
+        image={selectedImage}
+      />
+    </li>
+  );
 }
+
+ImageGalleryItem.propTypes = {
+  largeImageURL: PropTypes.string.isRequired,
+  webformatURL: PropTypes.string.isRequired,
+  tags: PropTypes.string.isRequired,
+};

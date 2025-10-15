@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Button } from './Button/Button';
 import { ImageGallery } from './ImageGallery/ImageGallery';
 import { Searchbar } from './Searchbar/Searchbar';
@@ -7,31 +7,20 @@ import style from './App.module.css';
 import { getAPI } from '../pixabay-api';
 import toast, { Toaster } from 'react-hot-toast';
 
-export class App extends Component {
-  state = {
-    search: '',
-    images: [],
-    page: 1,
-    query: '',
-    isLoading: false,
-    isError: false,
-    isEnd: false,
-  };
+export function App() {
+  const [search, setSearch] = useState('');
+  const [images, setImages] = useState([]);
+  const [page, setPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isError, setIsError] = useState(false);
+  const [isEnd, setIsEnd] = useState(false);
 
-  componentDidUpdate = async (_prevProps, prevState) => {
-    const { search, page } = this.state;
-
-    if (prevState.search !== search || prevState.page !== page) {
-      await this.fetchImages(search, page);
-    }
-  };
-
-  fetchImages = async (search, page) => {
+  const fetchImages = useCallback(async (searchQuery, currentPage) => {
     try {
-      this.setState({ isLoading: true });
-      this.setState({ isError: false });
+      setIsLoading(true);
+      setIsError(false);
 
-      const fetchedImages = await getAPI(search, page);
+      const fetchedImages = await getAPI(searchQuery, currentPage);
       const { hits, totalHits } = fetchedImages;
 
       if (hits.length === 0) {
@@ -41,12 +30,12 @@ export class App extends Component {
         return;
       }
 
-      if (page === 1) {
+      if (currentPage === 1) {
         toast.success(`Hooray! We found ${totalHits} images.`);
       }
 
-      if (page * 12 >= totalHits) {
-        this.setState({ isEnd: true });
+      if (currentPage * 12 >= totalHits) {
+        setIsEnd(true);
         toast("We're sorry, but you've reached the end of search results.", {
           icon: '🙁',
           style: {
@@ -57,17 +46,32 @@ export class App extends Component {
         });
       }
 
-      this.setState(prevState => ({
-        images: [...prevState.images, ...hits],
-      }));
+      setImages(prev => [...prev, ...hits]);
     } catch {
-      this.setState({ isError: true });
+      setIsError(true);
     } finally {
-      this.setState({ isLoading: false });
+      setIsLoading(false);
     }
-  };
+  }, []);
 
-  handleSubmit = e => {
+  useEffect(() => {
+    if (!search) return;
+    let cancelled = false;
+
+    const run = async () => {
+      await fetchImages(search, page);
+    };
+
+    if (!cancelled) {
+      run();
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [search, page, fetchImages]);
+
+  const handleSubmit = e => {
     e.preventDefault();
     const newSearch = e.target.search.value.trim().toLowerCase();
 
@@ -76,28 +80,27 @@ export class App extends Component {
       return;
     }
 
-    this.setState({ search: newSearch, page: 1, images: [], isEnd: false });
+    setSearch(newSearch);
+    setPage(1);
+    setImages([]);
+    setIsEnd(false);
   };
 
-  handleClick = () => {
-    this.setState(prevState => ({ page: prevState.page + 1 }));
+  const handleClick = () => {
+    setPage(prev => prev + 1);
   };
 
-  render() {
-    const { images, isLoading, isError, isEnd } = this.state;
-    return (
-      <div className={style.app}>
-        <Searchbar onSubmit={this.handleSubmit} />
-        {}
-        {images.length >= 1 && <ImageGallery photos={images} />}
+  return (
+    <div className={style.app}>
+      <Searchbar onSubmit={handleSubmit} />
+      {}
+      {images.length >= 1 && <ImageGallery photos={images} />}
 
-        {}
-        {images.length >= 1 && !isEnd && <Button onClick={this.handleClick} />}
-        {isLoading && <Loader />}
-        {isError &&
-          toast.error('Oops, something went wrong. Please try again.')}
-        <Toaster position="top-right" reverseOrder={false} />
-      </div>
-    );
-  }
+      {}
+      {images.length >= 1 && !isEnd && <Button onClick={handleClick} />}
+      {isLoading && <Loader />}
+      {isError && toast.error('Oops, something went wrong. Please try again.')}
+      <Toaster position="top-right" reverseOrder={false} />
+    </div>
+  );
 }
